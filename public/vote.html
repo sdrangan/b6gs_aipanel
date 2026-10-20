@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wow vs. Crisis</title>
+<style>
+  :root { --bg: #0f1115; --fg: #f2f2f2; --muted: #9aa0aa; --card: #1a1d24; --wow: #f5b700; --crisis: #ff4d4d; }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 480px; padding: 20px 16px; background: var(--bg); color: var(--fg);
+         font: 16px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h1 .w { color: var(--wow); } h1 .c { color: var(--crisis); }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .q { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .q h2 { margin: 0 0 4px; font-size: 1.25rem; }
+  .q p { margin: 0 0 12px; color: var(--muted); font-size: .92rem; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .grid button { font: inherit; font-size: 1.25rem; padding: 12px 0; border-radius: 8px;
+                 border: 1px solid #333; background: #262a33; color: var(--fg); }
+  #wow button.on { background: var(--wow); border-color: var(--wow); color: #000; }
+  #crisis button.on { background: var(--crisis); border-color: var(--crisis); color: #000; }
+  #submit { width: 100%; font: inherit; font-size: 1.2rem; font-weight: 600; padding: 14px;
+            border: 0; border-radius: 10px; background: #fff; color: #000; }
+  #submit:disabled { opacity: .35; }
+  #msg { text-align: center; margin-top: 12px; min-height: 1.4em; }
+  .closed { text-align: center; padding: 48px 0; color: var(--muted); font-size: 1.1rem; }
+</style>
+</head>
+<body>
+<h1><span class="w">Wow</span> vs. <span class="c">Crisis</span></h1>
+<p class="sub" id="sub">Brooklyn 6G Summit · University panel</p>
+
+<div id="form" hidden>
+  <div class="q">
+    <h2>Wow</h2>
+    <p>How much has AI amazed you this year? (1 = meh, 10 = mind blown)</p>
+    <div class="grid" id="wow"></div>
+  </div>
+  <div class="q">
+    <h2>Crisis</h2>
+    <p>How much has it made you wonder what's left for you? (1 = not at all, 10 = updating my LinkedIn)</p>
+    <div class="grid" id="crisis"></div>
+  </div>
+  <button id="submit" disabled>Submit</button>
+  <div id="msg"></div>
+</div>
+<div id="closed" class="closed">Voting isn't open right now. Hang tight!</div>
+
+<script>
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  const load = (k) => { try { return JSON.parse(store.get(k)); } catch { return null; } };
+
+  let voter = store.get('voter');
+  if (!voter) {
+    voter = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    store.set('voter', voter);
+  }
+
+  const pick = { wow: null, crisis: null };
+  let round = null;
+  const $ = (id) => document.getElementById(id);
+
+  for (const field of ['wow', 'crisis']) {
+    for (let i = 1; i <= 10; i++) {
+      const b = document.createElement('button');
+      b.textContent = i;
+      b.onclick = () => { pick[field] = i; render(); };
+      $(field).appendChild(b);
+    }
+  }
+
+  function render() {
+    for (const field of ['wow', 'crisis']) {
+      [...$(field).children].forEach((b, i) => b.classList.toggle('on', pick[field] === i + 1));
+    }
+    $('submit').disabled = !(pick.wow && pick.crisis);
+  }
+
+  $('submit').onclick = async () => {
+    try {
+      const r = await fetch('/api/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voter, ...pick }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Something went wrong');
+      store.set('vote' + j.round, JSON.stringify(pick));
+      $('msg').textContent = 'Got it! You can change your vote until voting closes.';
+    } catch (e) {
+      $('msg').textContent = e.message;
+    }
+  };
+
+  async function poll() {
+    try {
+      const s = await (await fetch('/api/state')).json();
+      if (s.round !== round) {
+        round = s.round;
+        const mine = load('vote' + round);
+        const prefill = mine || (round === 2 ? load('vote1') : null);
+        pick.wow = prefill?.wow ?? null;
+        pick.crisis = prefill?.crisis ?? null;
+        $('msg').textContent = mine ? 'Your vote is in. You can change it until voting closes.' : '';
+        $('sub').textContent = round === 2 ? 'Round 2: has your score changed?' : 'Brooklyn 6G Summit · University panel';
+        render();
+      }
+      $('form').hidden = !s.open;
+      $('closed').hidden = s.open;
+    } catch {}
+    setTimeout(poll, 3000);
+  }
+  poll();
+</script>
+</body>
+</html>

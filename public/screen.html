@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wow vs. Crisis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --bg: #0b0d11; --fg: #f4f4f4; --muted: #8d939e; --line: #2a2e37; --wow: #f5b700; --crisis: #ff4d4d; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+         display: flex; flex-direction: column; padding: 2.5vh 3vw; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 2vw; }
+  h1 { margin: 0; font-size: 5.5vw; letter-spacing: -.02em; }
+  h1 .w { color: var(--wow); } h1 .c { color: var(--crisis); }
+  #status { color: var(--muted); font-size: 1.6vw; margin-top: .6vh; }
+  #status b { color: var(--fg); }
+  .join { display: flex; align-items: center; gap: 1.2vw; font-size: 1.5vw; color: var(--muted); text-align: right; }
+  .join strong { display: block; color: var(--fg); font-size: 1.9vw; }
+  #qr { background: #fff; padding: 8px; border-radius: 8px; line-height: 0; }
+  #qr img, #qr canvas { width: 11vw !important; height: 11vw !important; }
+  table { flex: 1; width: 100%; border-collapse: separate; border-spacing: .6vw; margin-top: 2vh; table-layout: fixed; }
+  th { font-size: 2.2vw; font-weight: 600; padding: .5vh 0; }
+  th.rowlabel { text-align: left; font-size: 3vw; width: 11%; }
+  th.rowlabel.wow { color: var(--wow); } th.rowlabel.crisis { color: var(--crisis); }
+  th.aud { color: #8fd3ff; }
+  td { background: #181b22; border-radius: 1vw; text-align: center; vertical-align: middle; position: relative;
+       transition: background .6s; }
+  td.aud { outline: 2px solid #8fd3ff55; }
+  td.edit { cursor: pointer; }
+  .num { font-size: 7vw; font-weight: 800; line-height: 1; }
+  .prev { font-size: 1.5vw; color: #ffffffaa; margin-bottom: .5vh; }
+  .hist { display: flex; align-items: flex-end; gap: 2px; height: 4.5vh; margin: 1vh 1.2vw 0; }
+  .hist i { flex: 1; background: #ffffffcc; border-radius: 2px 2px 0 0; min-height: 1px; }
+  td input { width: 70%; font: inherit; font-size: 5vw; text-align: center; border-radius: 8px; border: 0; }
+  #controls { display: flex; gap: 8px; justify-content: center; margin-top: 1.5vh; }
+  #controls button { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+                     background: #1d2129; color: var(--fg); cursor: pointer; }
+  #controls button.on { background: #fff; color: #000; }
+  #controls .hint { color: var(--muted); font-size: 12px; align-self: center; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="w">Wow</span> vs. <span class="c">Crisis</span></h1>
+    <div id="status">Connecting…</div>
+  </div>
+  <div class="join">
+    <div>Vote on your phone<strong id="url"></strong></div>
+    <div id="qr"></div>
+  </div>
+</header>
+
+<table id="board"></table>
+
+<div id="controls" hidden>
+  <button data-act="round1">Round 1</button>
+  <button data-act="round2">Round 2</button>
+  <button data-act="toggle" id="toggle">Open voting</button>
+  <button data-act="reset">Reset all</button>
+  <span class="hint">Click a panelist cell to enter a score · press H to hide these controls</span>
+</div>
+
+<script>
+  const key = new URLSearchParams(location.search).get('key');
+  const $ = (id) => document.getElementById(id);
+  $('url').textContent = location.host;
+  if (window.QRCode) new QRCode($('qr'), { text: location.origin + '/', width: 256, height: 256 });
+  else $('qr').hidden = true;
+
+  let S = null;
+  let editing = false;
+
+  const fmt = (v) => (v == null ? '–' : Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Wow glows gold; Crisis runs from calm blue (1) to alarm red (10).
+  function bg(field, v) {
+    if (v == null) return '';
+    const t = (v - 1) / 9;
+    return field === 'crisis'
+      ? `hsl(${210 - 210 * t} 75% ${30 + 10 * t}%)`
+      : `hsl(45 ${35 + 55 * t}% ${18 + 24 * t}%)`;
+  }
+
+  function value(cur, prev) {
+    const was = S.round === 2 && prev != null ? `<div class="prev">was ${fmt(prev)}</div>` : '';
+    return `${was}<div class="num">${fmt(cur)}</div>`;
+  }
+
+  function hist(counts) {
+    const max = Math.max(1, ...counts);
+    return `<div class="hist">${counts.map((c) => `<i style="height:${(c / max) * 100}%"></i>`).join('')}</div>`;
+  }
+
+  function render() {
+    if (!S || editing) return;
+    const r = S.round;
+    const aud = S.audience[r];
+    let html = '<tr><th></th>' + S.panelists.map((n) => `<th>${esc(n)}</th>`).join('') + '<th class="aud">Audience</th></tr>';
+    for (const field of ['wow', 'crisis']) {
+      html += `<tr><th class="rowlabel ${field}">${field === 'wow' ? 'Wow' : 'Crisis'}</th>`;
+      for (const n of S.panelists) {
+        const cur = S.panel[r][n]?.[field];
+        const prev = S.panel[1][n]?.[field];
+        html += `<td class="${key ? 'edit' : ''}" data-name="${esc(n)}" data-field="${field}" style="background:${bg(field, cur)}">${value(cur, prev)}</td>`;
+      }
+      html += `<td class="aud" style="background:${bg(field, aud[field])}">${value(aud[field], S.audience[1][field])}${aud.n ? hist(aud.hist[field]) : ''}</td></tr>`;
+    }
+    $('board').innerHTML = html;
+    $('status').innerHTML = `${r === 2 ? 'Round 2: has your score changed?' : 'Round 1'} · ` +
+      `${S.open ? '<b>Voting open</b>' : 'Voting closed'} · <b>${aud.n}</b> audience vote${aud.n === 1 ? '' : 's'}`;
+    if (key) {
+      document.querySelector('[data-act=round1]').classList.toggle('on', r === 1);
+      document.querySelector('[data-act=round2]').classList.toggle('on', r === 2);
+      $('toggle').textContent = S.open ? 'Close voting' : 'Open voting';
+      $('toggle').classList.toggle('on', S.open);
+    }
+  }
+
+  async function poll() {
+    try {
+      S = await (await fetch('/api/state')).json();
+      render();
+    } catch {
+      $('status').textContent = 'Reconnecting…';
+    }
+    setTimeout(poll, 1500);
+  }
+
+  async function admin(body) {
+    try {
+      const r = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, ...body }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      S = j;
+    } catch (e) {
+      alert(e.message);
+    }
+    render();
+  }
+
+  if (key) {
+    $('controls').hidden = false;
+    $('controls').onclick = (e) => {
+      const act = e.target.dataset?.act;
+      if (act === 'round1') admin({ action: 'round', round: 1 });
+      if (act === 'round2') admin({ action: 'round', round: 2 });
+      if (act === 'toggle') admin({ action: S?.open ? 'close' : 'open' });
+      if (act === 'reset' && confirm('Erase all scores and votes?')) admin({ action: 'reset' });
+    };
+
+    $('board').onclick = (e) => {
+      const td = e.target.closest('td.edit');
+      if (!td || editing) return;
+      editing = true;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = 1;
+      input.max = 10;
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+      // Enter saves (blank clears), Escape or clicking away with a blank box cancels.
+      const done = (save) => {
+        if (!editing) return;
+        editing = false;
+        if (save) admin({ action: 'set', name: td.dataset.name, field: td.dataset.field, value: input.value });
+        else render();
+      };
+      input.onkeydown = (ev) => {
+        if (ev.key === 'Enter') done(true);
+        if (ev.key === 'Escape') done(false);
+      };
+      input.onblur = () => done(input.value !== '');
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'h' || e.key === 'H') && e.target.tagName !== 'INPUT') $('controls').hidden = !$('controls').hidden;
+    });
+  }
+
+  poll();
+</script>
+</body>
+</html>
