@@ -6,38 +6,56 @@
 <title>Wow vs. Crisis</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  :root { --bg: #0b0d11; --fg: #f4f4f4; --muted: #8d939e; --line: #2a2e37; --wow: #f5b700; --crisis: #ff4d4d; }
+  :root { --bg: #0b0d11; --fg: #f4f4f4; --muted: #8d939e; --line: #2a2e37; --wow: #f5b700; --crisis: #ff4d4d;
+          --ai: #b98cff; --aud: #8fd3ff; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-         display: flex; flex-direction: column; padding: 2.5vh 3vw; }
+         display: flex; flex-direction: column; padding: 2vh 2.5vw; }
   header { display: flex; justify-content: space-between; align-items: center; gap: 2vw; }
-  h1 { margin: 0; font-size: 5.5vw; letter-spacing: -.02em; }
+  h1 { margin: 0; font-size: 4.5vw; letter-spacing: -.02em; }
   h1 .w { color: var(--wow); } h1 .c { color: var(--crisis); }
-  #status { color: var(--muted); font-size: 1.6vw; margin-top: .6vh; }
+  #status { color: var(--muted); font-size: 1.5vw; margin-top: .4vh; }
   #status b { color: var(--fg); }
-  .join { display: flex; align-items: center; gap: 1.2vw; font-size: 1.5vw; color: var(--muted); text-align: right; }
-  .join strong { display: block; color: var(--fg); font-size: 1.9vw; }
-  #qr { background: #fff; padding: 8px; border-radius: 8px; line-height: 0; }
-  #qr img, #qr canvas { width: 11vw !important; height: 11vw !important; }
-  table { flex: 1; width: 100%; border-collapse: separate; border-spacing: .6vw; margin-top: 2vh; table-layout: fixed; }
-  th { font-size: 2.2vw; font-weight: 600; padding: .5vh 0; }
-  th.rowlabel { text-align: left; font-size: 3vw; width: 11%; }
+  .join { display: flex; align-items: center; gap: 1.2vw; font-size: 1.4vw; color: var(--muted); text-align: right; }
+  .join strong { display: block; color: var(--fg); font-size: 1.8vw; }
+  #qr { background: #fff; padding: 6px; border-radius: 8px; line-height: 0; }
+  #qr img, #qr canvas { width: 9vw !important; height: 9vw !important; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: .55vw; margin-top: 1vh; table-layout: fixed; }
+  thead th { font-size: 1.8vw; font-weight: 600; padding: 0; vertical-align: bottom; }
+  .who { display: flex; flex-direction: column; align-items: center; gap: .6vh; }
+  .who img, .avatar { width: 6.5vw; height: 6.5vw; border-radius: 50%; object-fit: cover; object-position: 50% 20%; border: 3px solid #ffffff22; }
+  .avatar { display: flex; align-items: center; justify-content: center; background: #232733; font-size: 2.8vw; }
+  th.ai, th.ai .avatar { color: var(--ai); } th.ai img, th.ai .avatar { border-color: var(--ai); }
+  th.aud, th.aud .avatar { color: var(--aud); } th.aud .avatar { border-color: var(--aud); }
+  th.rowlabel { text-align: left; font-size: 2.6vw; width: 9%; }
   th.rowlabel.wow { color: var(--wow); } th.rowlabel.crisis { color: var(--crisis); }
-  th.aud { color: #8fd3ff; }
-  td { background: #181b22; border-radius: 1vw; text-align: center; vertical-align: middle; position: relative;
-       transition: background .6s; }
+  tbody td { height: 21vh; background: #181b22; border-radius: 1vw; text-align: center; vertical-align: middle;
+             transition: background .6s; }
+  td.ai { outline: 2px solid #b98cff66; }
   td.aud { outline: 2px solid #8fd3ff55; }
   td.edit { cursor: pointer; }
-  .num { font-size: 7vw; font-weight: 800; line-height: 1; }
-  .prev { font-size: 1.5vw; color: #ffffffaa; margin-bottom: .5vh; }
-  .hist { display: flex; align-items: flex-end; gap: 2px; height: 4.5vh; margin: 1vh 1.2vw 0; }
+  .num { font-size: 5.8vw; font-weight: 800; line-height: 1; }
+  .prev { font-size: 1.3vw; color: #ffffffaa; margin-bottom: .5vh; }
+  .hist { display: flex; align-items: flex-end; gap: 2px; height: 3.5vh; margin: 1vh .8vw 0; }
   .hist i { flex: 1; background: #ffffffcc; border-radius: 2px 2px 0 0; min-height: 1px; }
-  td input { width: 70%; font: inherit; font-size: 5vw; text-align: center; border-radius: 8px; border: 0; }
-  #controls { display: flex; gap: 8px; justify-content: center; margin-top: 1.5vh; }
+  td input { width: 70%; font: inherit; font-size: 4vw; text-align: center; border-radius: 8px; border: 0; }
+
+  #say { margin: 1.2vh .55vw 0; min-height: 9vh; padding: 1.4vh 1.6vw; border-radius: 1vw; border: 2px solid #b98cff55;
+         background: #1a1526; font-size: 2.1vw; line-height: 1.3; display: flex; align-items: center; gap: 1.2vw; }
+  #say[hidden] { display: none; }
+  #say .tag { color: var(--ai); font-weight: 700; white-space: nowrap; }
+  #say .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
+  @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+  #say.admin { cursor: pointer; }
+
+  #controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: auto; padding-top: 1.2vh; }
+  #controls[hidden] { display: none; }
   #controls button { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
                      background: #1d2129; color: var(--fg); cursor: pointer; }
   #controls button.on { background: #fff; color: #000; }
+  #controls button.ai { border-color: var(--ai); color: var(--ai); }
   #controls .hint { color: var(--muted); font-size: 12px; align-self: center; }
 </style>
 </head>
@@ -53,14 +71,16 @@
   </div>
 </header>
 
-<table id="board"></table>
+<table id="board"><thead></thead><tbody></tbody></table>
+<div id="say" hidden></div>
 
 <div id="controls" hidden>
   <button data-act="round1">Round 1</button>
   <button data-act="round2">Round 2</button>
   <button data-act="toggle" id="toggle">Open voting</button>
+  <button data-act="ask" class="ai">Ask the AI</button>
   <button data-act="reset">Reset all</button>
-  <span class="hint">Click a panelist cell to enter a score · press H to hide these controls</span>
+  <span class="hint">Click a score to edit it · click the AI's quote to edit it · H hides these controls</span>
 </div>
 
 <script>
@@ -72,6 +92,7 @@
 
   let S = null;
   let editing = false;
+  let headerBuilt = false;
 
   const fmt = (v) => (v == null ? '–' : Number.isInteger(v) ? String(v) : v.toFixed(1));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -95,21 +116,47 @@
     return `<div class="hist">${counts.map((c) => `<i style="height:${(c / max) * 100}%"></i>`).join('')}</div>`;
   }
 
+  // Photos come from /photos/<name>; a missing photo falls back to a letter or emoji.
+  function who(name, photo, fallback) {
+    const img = photo ? `<img src="/photos/${photo}" alt="" onerror="this.outerHTML='<div class=avatar>${fallback}</div>'">` : `<div class="avatar">${fallback}</div>`;
+    return `<div class="who">${img}<span>${esc(name)}</span></div>`;
+  }
+
+  // The header (names and photos) is built once so the photos don't reload on every refresh.
+  function buildHeader() {
+    $('board').tHead.innerHTML = '<tr><th class="rowlabel"></th>' +
+      S.panelists.map((n) => `<th>${who(n, n.toLowerCase(), esc(n[0]))}</th>`).join('') +
+      `<th class="ai">${who(S.ai, 'ai', '&#129302;')}</th>` +
+      `<th class="aud">${who('Audience', null, '&#128101;')}</th></tr>`;
+    headerBuilt = true;
+  }
+
   function render() {
     if (!S || editing) return;
+    if (!headerBuilt) buildHeader();
     const r = S.round;
     const aud = S.audience[r];
-    let html = '<tr><th></th>' + S.panelists.map((n) => `<th>${esc(n)}</th>`).join('') + '<th class="aud">Audience</th></tr>';
+    let html = '';
     for (const field of ['wow', 'crisis']) {
       html += `<tr><th class="rowlabel ${field}">${field === 'wow' ? 'Wow' : 'Crisis'}</th>`;
-      for (const n of S.panelists) {
+      for (const n of [...S.panelists, S.ai]) {
         const cur = S.panel[r][n]?.[field];
         const prev = S.panel[1][n]?.[field];
-        html += `<td class="${key ? 'edit' : ''}" data-name="${esc(n)}" data-field="${field}" style="background:${bg(field, cur)}">${value(cur, prev)}</td>`;
+        const cls = [n === S.ai ? 'ai' : '', key ? 'edit' : ''].join(' ');
+        html += `<td class="${cls}" data-name="${esc(n)}" data-field="${field}" style="background:${bg(field, cur)}">${value(cur, prev)}</td>`;
       }
       html += `<td class="aud" style="background:${bg(field, aud[field])}">${value(aud[field], S.audience[1][field])}${aud.n ? hist(aud.hist[field]) : ''}</td></tr>`;
     }
-    $('board').innerHTML = html;
+    $('board').tBodies[0].innerHTML = html;
+
+    const reasoning = S.panel[r][S.ai]?.reasoning;
+    const say = $('say');
+    say.hidden = !(S.aiBusy || reasoning || key);
+    say.classList.toggle('admin', !!key);
+    say.innerHTML = `<span class="tag">${esc(S.ai)}:</span>` + (S.aiBusy
+      ? '<span>Thinking<span class="dots"></span></span>'
+      : reasoning ? `<span>&ldquo;${esc(reasoning)}&rdquo;</span>` : '<span style="color:var(--muted)">(no answer yet)</span>');
+
     $('status').innerHTML = `${r === 2 ? 'Round 2: has your score changed?' : 'Round 1'} · ` +
       `${S.open ? '<b>Voting open</b>' : 'Voting closed'} · <b>${aud.n}</b> audience vote${aud.n === 1 ? '' : 's'}`;
     if (key) {
@@ -153,7 +200,21 @@
       if (act === 'round1') admin({ action: 'round', round: 1 });
       if (act === 'round2') admin({ action: 'round', round: 2 });
       if (act === 'toggle') admin({ action: S?.open ? 'close' : 'open' });
+      if (act === 'ask') {
+        const note = prompt('Anything to tell the AI first? (optional, e.g. "Gerhard just said AI will never design a radio")', '');
+        if (note !== null) {
+          S.aiBusy = true;
+          render();
+          admin({ action: 'ask', note });
+        }
+      }
       if (act === 'reset' && confirm('Erase all scores and votes?')) admin({ action: 'reset' });
+    };
+
+    $('say').onclick = () => {
+      const cur = S?.panel[S.round][S.ai]?.reasoning || '';
+      const text = prompt("Edit the AI's quote:", cur);
+      if (text !== null) admin({ action: 'reasoning', text });
     };
 
     $('board').onclick = (e) => {
