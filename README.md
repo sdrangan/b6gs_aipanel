@@ -158,5 +158,6 @@ A missing photo shows the person's initial instead.
 | ---------------------- | ---------------------------------------------------------- |
 | `server.js`          | Web server, voting API and AI Bot, with state kept in memory |
 | `public/photos/`     | Panelist photos                                            |
+| `public/brand/`      | Summit logo strip, from the B6GS 2026 slide template |
 | `public/vote.html`   | Voting page for audience phones                            |
 | `public/screen.html` | Scoreboard for the screen, with QR code and admin controls |

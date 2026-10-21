@@ -13,6 +13,8 @@ const AI_MODEL = 'claude-opus-5-5';
 const MAX_VOTERS = 5000;
 const PHOTO_DIR = path.join(__dirname, 'public', 'photos');
 const PHOTO_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+const BRAND_DIR = path.join(__dirname, 'public', 'brand');
+const BRAND_FILES = { 'logos.png': 'image/png' };
 
 function freshState() {
   return {
@@ -160,6 +162,12 @@ http.createServer(async (req, res) => {
   }
   if (req.method === 'GET' && url.pathname.startsWith('/photos/')) {
     return sendPhoto(res, url.pathname.slice('/photos/'.length));
+  }
+  if (req.method === 'GET' && url.pathname.startsWith('/brand/')) {
+    const name = url.pathname.slice('/brand/'.length);
+    if (!BRAND_FILES[name]) return send(res, 404, 'Not found', 'text/plain');
+    res.writeHead(200, { 'Content-Type': BRAND_FILES[name], 'Cache-Control': 'max-age=3600' });
+    return fs.createReadStream(path.join(BRAND_DIR, name)).pipe(res);
   }
   if (req.method === 'GET' && url.pathname === '/api/state') {
     return send(res, 200, publicState());
