@@ -13,6 +13,10 @@ The audience votes the same two scores on their phones, and an **AI Bot**
 column asks Claude live for its own scores and a one-line explanation.
 Everything is shown on the screen behind the panel.
 
+**The AI Bot is switched off for now.** The screen shows only the panelists and
+the audience, with no AI column, quote box or "Ask the AI" button. To bring it
+back, set `AI_ENABLED = true` near the top of `server.js`.
+
 ## Running locally
 
 You need [Node.js](https://nodejs.org) 18 or later.
@@ -145,7 +149,7 @@ Suggested flow:
 ## Photos
 
 Put each panelist's photo in `public/photos/`, named after their first name in
-lowercase: `sundeep.jpg`, `kaushik.jpg`, `gerhard.jpg`, `tommaso.jpg`,
+lowercase: `sundeep.jpg`, `kaushik.jpg`, `gerhard.jpg`, `manu.jpg`,
 `danijela.jpg`. JPEG, PNG and WebP all work. Square photos look best, since
 they are cropped to a circle.
 

@@ -1,13 +1,15 @@
 // Wow vs. Crisis live scoreboard for the B6GS 2026 university panel.
 // `node server.js` (Node 18+). State is in memory. The AI Bot column calls
 // Claude and needs ANTHROPIC_API_KEY; everything else works without it.
+// It is switched off for now: set AI_ENABLED to true to bring it back.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || 'changeme';
-const PANELISTS = ['Sundeep', 'Kaushik', 'Gerhard', 'Tommaso', 'Danijela'];
+const PANELISTS = ['Sundeep', 'Kaushik', 'Gerhard', 'Manu', 'Danijela'];
+const AI_ENABLED = false;
 const AI_NAME = 'AI Bot';
 const AI_MODEL = 'claude-opus-5-5';
 const MAX_VOTERS = 5000;
@@ -45,7 +47,7 @@ function publicState() {
     round: state.round,
     open: state.open,
     panelists: PANELISTS,
-    ai: AI_NAME,
+    ai: AI_ENABLED ? AI_NAME : null,
     aiBusy: state.aiBusy,
     panel: state.panel,
     audience: { 1: summarize(state.votes[1]), 2: summarize(state.votes[2]) },
@@ -193,7 +195,7 @@ http.createServer(async (req, res) => {
     if (b?.key !== ADMIN_KEY) return send(res, 403, { error: 'Bad admin key' });
     switch (b.action) {
       case 'set': {
-        if (![...PANELISTS, AI_NAME].includes(b.name) || !['wow', 'crisis'].includes(b.field)) {
+        if (![...PANELISTS, ...(AI_ENABLED ? [AI_NAME] : [])].includes(b.name) || !['wow', 'crisis'].includes(b.field)) {
           return send(res, 400, { error: 'Bad panelist or field' });
         }
         const scores = (state.panel[state.round][b.name] ||= {});
@@ -203,11 +205,13 @@ http.createServer(async (req, res) => {
         break;
       }
       case 'reasoning': {
+        if (!AI_ENABLED) return send(res, 400, { error: 'The AI Bot is switched off' });
         const scores = (state.panel[state.round][AI_NAME] ||= {});
         scores.reasoning = String(b.text || '').slice(0, 400);
         break;
       }
       case 'ask': {
+        if (!AI_ENABLED) return send(res, 400, { error: 'The AI Bot is switched off' });
         if (state.aiBusy) return send(res, 409, { error: 'The AI is already thinking' });
         state.aiBusy = true;
         try {

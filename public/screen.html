@@ -136,11 +136,16 @@
   }
 
   // The header (names and photos) is built once so the photos don't reload on every refresh.
+  // S.ai is null when the server has the AI Bot switched off.
   function buildHeader() {
     $('board').tHead.innerHTML = '<tr><th class="rowlabel"></th>' +
       S.panelists.map((n) => `<th>${who(n, n.toLowerCase(), esc(n[0]))}</th>`).join('') +
-      `<th class="ai">${who(S.ai, 'ai', '&#129302;')}</th>` +
+      (S.ai ? `<th class="ai">${who(S.ai, 'ai', '&#129302;')}</th>` : '') +
       `<th class="aud">${who('Audience', null, '&#128101;')}</th></tr>`;
+    if (!S.ai) {
+      document.querySelector('[data-act=ask]').remove();
+      document.querySelector('#controls .hint').textContent = 'Click a score to edit it · H hides these controls';
+    }
     headerBuilt = true;
   }
 
@@ -152,7 +157,7 @@
     let html = '';
     for (const field of ['wow', 'crisis']) {
       html += `<tr><th class="rowlabel ${field}">${field === 'wow' ? 'Wow' : 'Crisis'}</th>`;
-      for (const n of [...S.panelists, S.ai]) {
+      for (const n of S.ai ? [...S.panelists, S.ai] : S.panelists) {
         const cur = S.panel[r][n]?.[field];
         const prev = S.panel[1][n]?.[field];
         const cls = [n === S.ai ? 'ai' : '', key ? 'edit' : ''].join(' ');
@@ -162,9 +167,9 @@
     }
     $('board').tBodies[0].innerHTML = html;
 
-    const reasoning = S.panel[r][S.ai]?.reasoning;
+    const reasoning = S.ai && S.panel[r][S.ai]?.reasoning;
     const say = $('say');
-    say.hidden = !(S.aiBusy || reasoning || key);
+    say.hidden = !S.ai || !(S.aiBusy || reasoning || key);
     say.classList.toggle('admin', !!key);
     say.innerHTML = `<span class="tag">${esc(S.ai)}:</span>` + (S.aiBusy
       ? '<span>Thinking<span class="dots"></span></span>'
@@ -225,6 +230,7 @@
     };
 
     $('say').onclick = () => {
+      if (!S?.ai) return;
       const cur = S?.panel[S.round][S.ai]?.reasoning || '';
       const text = prompt("Edit the AI's quote:", cur);
       if (text !== null) admin({ action: 'reasoning', text });
